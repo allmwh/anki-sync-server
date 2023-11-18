@@ -6,9 +6,9 @@ platform:
   os: linux
   arch: amd64
 
-trigger:
-  event:
-   - tag
+# trigger:
+#   event:
+#    - tag
 
 steps:
 - name: build_docker_image

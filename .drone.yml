@@ -1,0 +1,25 @@
+kind: pipeline
+type: docker
+name: build_anki
+
+platform:
+  os: linux
+  arch: amd64
+
+trigger:
+  event:
+   - tag
+
+steps:
+- name: build_docker_image
+  image: plugins/docker
+  settings:
+    username: 
+     from_secret: DOCKER_USERNAME
+     from_secret: DOCKER_PASSWORD
+    dockerfile: ./Dockerfile
+    repo: allmwh/anki-sync-server
+    tags: 
+     - $DRONE_TAG
+     - latest
+

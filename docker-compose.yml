@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+ anki-server:
+  image: allmwh/anki-sync-server
+  container_name: anki-server
+  restart: always
+  environment:
+    SYNC_USER1: USER:PASSWORD
+  volumes:
+   - ./anki_sync:/sync
+   - /etc/timezone:/etc/timezone:ro
+   - /etc/localtime:/etc/localtime:ro

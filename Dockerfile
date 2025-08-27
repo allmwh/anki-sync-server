@@ -2,8 +2,8 @@ FROM rust:1.85.0
 # need to install package or sync server build fails
 RUN apt-get update && apt-get install protobuf-compiler -y
 
-# https://github.com/ankitects/anki/releases/tag/25.02.4
-RUN cargo install --git https://github.com/ankitects/anki.git --rev a5c33ad anki-sync-server
+# https://github.com/ankitects/anki/releases/tag/25.07.5
+RUN cargo install --git https://github.com/ankitects/anki.git --rev 7172b2d anki-sync-server
 
 ENV SYNC_PORT=27701
 ENV SYNC_BASE=/sync

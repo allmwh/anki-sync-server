@@ -1,0 +1,98 @@
+# 你的儲存庫: allmwh/anki-sync-server
+# 檔案路徑: .github/workflows/check-and-update.yml
+name: Check Anki Release and Build
+
+on:
+  schedule:
+    - cron: '0 0 * * 7'
+  workflow_dispatch:
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Get latest Anki release tag
+        id: get_tag
+        run: |
+          # 第一步：從 releases/latest API 取得最新的 tag_name
+          LATEST_RELEASE_TAG=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+          https://api.github.com/repos/ankitects/anki/releases/latest | jq -r '.tag_name')
+
+          echo "最新 Anki Tag: $LATEST_RELEASE_TAG"
+          
+          # 將 tag 輸出，讓後續步驟可以使用
+          echo "tag=$LATEST_RELEASE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if version needs update
+        id: check_version
+        run: |
+          # 我們用 .last_processed_tag 檔案來追蹤版本號
+          CURRENT_TAG=$(cat .last_processed_tag 2>/dev/null || echo "")
+          LATEST_TAG="${{ steps.get_tag.outputs.tag }}"
+
+          if [ "$CURRENT_TAG" != "$LATEST_TAG" ]; then
+            echo "::notice::偵測到新版本！從 $CURRENT_TAG 更新到 $LATEST_TAG"
+            echo "update_required=true" >> $GITHUB_OUTPUT
+            # 將新的 tag 寫入檔案，以便下次比對
+            echo "$LATEST_TAG" > .last_processed_tag
+          else
+            echo "版本已是最新：$CURRENT_TAG"
+            echo "update_required=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Get commit hash from the new release tag
+        id: get_hash
+        if: steps.check_version.outputs.update_required == 'true'
+        run: |
+          # 第二步：使用 tag 從 git/ref/tags/{tag} API 取得對應的 commit hash (sha)
+          LATEST_COMMIT_HASH=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+          https://api.github.com/repos/ankitects/anki/git/ref/tags/${{ steps.get_tag.outputs.tag }} | jq -r '.object.sha')
+          
+          echo "對應的 Commit Hash: $LATEST_COMMIT_HASH"
+          echo "commit_hash=$LATEST_COMMIT_HASH" >> $GITHUB_OUTPUT
+
+      - name: Update Dockerfile
+        if: steps.check_version.outputs.update_required == 'true'
+        run: |
+          # 使用 sed 替換 Dockerfile 中的 --rev 後面的 hash
+          sed -i "s|--rev [a-f0-9]\+|--rev ${{ steps.get_hash.outputs.commit_hash }}|g" Dockerfile
+          echo "已更新 Dockerfile"
+
+      - name: Commit and Push Changes
+        if: steps.check_version.outputs.update_required == 'true'
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add Dockerfile .last_processed_tag
+          git commit -m "chore: Update Anki to ${{ steps.get_tag.outputs.tag }}"
+          git push
+
+      - name: Set up Docker Buildx
+        if: steps.check_version.outputs.update_required == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: steps.check_version.outputs.update_required == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        if: steps.check_version.outputs.update_required == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          # 使用 release tag 作為 Docker Image 的標籤
+          tags: |
+            allmwh/anki-sync-server:latest
+            allmwh/anki-sync-server:${{ steps.get_tag.outputs.tag }}

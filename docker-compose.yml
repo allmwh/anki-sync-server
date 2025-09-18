@@ -9,3 +9,5 @@ services:
    - ./anki_sync:/sync
    - /etc/timezone:/etc/timezone:ro
    - /etc/localtime:/etc/localtime:ro
+  ports:
+   - "27701:27701"

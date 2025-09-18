@@ -21,6 +21,8 @@ This repository provides a Docker image for a self-hosted Anki synchronization s
           - ./anki_sync:/sync
           - /etc/timezone:/etc/timezone:ro
           - /etc/localtime:/etc/localtime:ro
+        ports:
+          - "27701:27701"
     ```
 
 2.  **Run the Server**
@@ -32,4 +34,4 @@ This repository provides a Docker image for a self-hosted Anki synchronization s
     ```
 
 3.  **Configure Your Anki Client**
-    In your Anki desktop client, navigate to **Preferences > Network** and enter your server's address (e.g., `http://localhost:8080`) in the "Sync server" field. Finally, click the sync button and use the credentials you set up to begin synchronizing your data.
+    In your Anki desktop client, navigate to **Preferences > Network** and enter your server's address (e.g., `http://localhost:277001`) in the "Sync server" field. Finally, click the sync button and use the credentials you set up to begin synchronizing your data.

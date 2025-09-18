@@ -4,7 +4,7 @@ name: Check Anki Release and Build
 
 on:
   schedule:
-    - cron: '0 0 * * 7'
+    - cron: '0 0 * * SUN'
   workflow_dispatch:
 
 jobs:
